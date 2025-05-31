@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "DrunkardWalkSD"
+version = "0.1.0"
+description = "A study repository dedicated to the 'Drunkard Walk', modified by the addition of disorder in the coin."
+authors = [{ name = "Rafael Amorim", email = "rafael.science.amorim@gmail.com" }]
+readme = "README.md"
+license = { file = "LICENSE" }
+dependencies = ["numpy", "matplotlib"]
+
+[project.urls]
+"Homepage" = "https://github.com/OffworldAstronaut/DrunkardWalkSD"
