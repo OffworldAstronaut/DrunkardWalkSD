@@ -4,16 +4,16 @@ from matplotlib import pyplot as plt        # For plotting
 from typing import List                     # Typing hints
 
 class Drunkard: 
-    def __init__(self, coin_p: float) -> None:
+    def __init__(self, sidewalk_size: int) -> None:
         """Creates a new drunkard (walker) with a given probability of stepping right.
 
         Args:
-            coin_p (float): Probability of walking one step to the right.
+            sidewalk_size (int): Size of the sidewalk that the walker is placed.
         """
-        # Position of the walker
-        self.pos = 0
+        # Position of the walker -- the walker starts at the middle of the sidewalk
+        self.pos = int(sidewalk_size / 2.0)
         # Probability of walking one step to the right
-        self.coin_p = coin_p
+        self.coin_p = None # Dummy value -- it's get updated each time before walk()
 
     def walk(self) -> int:
         """Flips a coin and moves the drunkard one step."""
@@ -51,7 +51,7 @@ class Sidewalk:
             coin_p (float, optional): Coin probability of stepping right. Defaults to 0.50 (fair coin).
         """
         # Each sidewalk automatically has a drunkard attached to it
-        self.drunkard = Drunkard()
+        self.drunkard = Drunkard(size)
         self.size = size
         # Stores each position of the drunkard over time
         self.wandering_pos = []
@@ -206,8 +206,7 @@ class City:
         plt.savefig(
             f"AvgPos_{time()}_"
             f"nsw={self.n_sidewalks}_"
-            f"sws={self.sidewalk_size}_"
-            f"p={self.coin_p}.png"
+            f"sws={self.sidewalk_size}_.png"
         )
         plt.close()
 
@@ -226,8 +225,7 @@ class City:
         plt.savefig(
             f"Disp_{time()}_"
             f"nsw={self.n_sidewalks}_"
-            f"sws={self.sidewalk_size}_"
-            f"p={self.coin_p}.png"
+            f"sws={self.sidewalk_size}_.png"
         )
         
         # Closes the plot to prevent memory accumulation and plotting over the same plot
