@@ -2,6 +2,7 @@ from time import time                       # For file R&W operations
 import numpy as np                          # General numerical necessities
 from matplotlib import pyplot as plt        # For plotting
 from typing import List                     # Typing hints
+from scipy.stats import norm                # Normalization library
 
 class Drunkard: 
     def __init__(self, sidewalk_size: int) -> None:
@@ -12,8 +13,6 @@ class Drunkard:
         """
         # Position of the walker -- the walker starts at the middle of the sidewalk
         self.pos = int(sidewalk_size / 2.0)
-        # Probability of walking one step to the right
-        self.coin_p = None # Dummy value -- it's get updated each time before walk()
 
     def walk(self) -> int:
         """Flips a coin and moves the drunkard one step."""
@@ -52,6 +51,7 @@ class Sidewalk:
         """
         # Each sidewalk automatically has a drunkard attached to it
         self.drunkard = Drunkard(size)
+        # Stores the sidewalk's size 
         self.size = size
         # Stores each position of the drunkard over time
         self.wandering_pos = []
@@ -73,7 +73,7 @@ class Sidewalk:
         # The positions traveled by the walker are returned for statistical analysis
         return self.wandering_pos
         
-    # Auxiliar method -- gets the sidewalk's size
+    # Auxiliar method -- returns the sidewalk's size
     def get_size(self) -> int:
         return self.size
     
@@ -95,6 +95,8 @@ class City:
         
         # Stores the lists of positions from each sidewalk simulated
         self.pub_positions = []
+        # Stores the end positions from each sidewalk simulated
+        self.pub_end_positions = []
         # Stores the average of every walker's position in a given time (ie. record every walker's position 
         # at step 1, 2, ... and average them, then store in this list)
         self.pub_average = []
@@ -102,27 +104,31 @@ class City:
         self.pub_std = []
 
     def generate_coins(self) -> List[float]:
-        low_b = ((-1.0 * self.coin_W) / 2.0) + 0.5  
-        high_b = (self.coin_W / 2.0) + 0.5         
+        # Lower bound of the possible coin values
+        low_b = ((-1.0 * self.coin_W) / 2.0) + 0.5
+        # Upper bound of the possible coin values
+        high_b = (self.coin_W / 2.0) + 0.5
+        # List of coins assigned to each sidewalk position
         coins = []
         
+        # Populates the list of coins with uniform probability (limited by the calculated bounds)
         for _ in range(self.sidewalk_size):    
             new_coin = np.random.uniform(low_b, high_b)
             coins.append(new_coin)
             
+        # Returns the generated coins
         return coins
         
-    def roam(self, end_step: int = 500) -> List[List[int]]:
+    def roam(self) -> List[List[int]]:
         """Executes each sidewalk simulation in succession and stores the positions for 
         statistical analysis. 
-
-        Args:
-            end_step (int, optional): The maximum number of steps that the walkers
-            are going to traverse. Defaults to 500.
-
+        
         Returns:
             List[List[int]]: List containing lists of the positions of each walker over time.
         """
+        
+        # Defines the maximum steps in function of the size of the sidewalks
+        end_step = int(self.sidewalk_size / 2.0) + 1
         
         # Executes the random walk for each sidewalk specified in the City's initialization
         for _ in range(self.n_sidewalks):
@@ -130,6 +136,8 @@ class City:
             sidewalk = Sidewalk(self.sidewalk_size, self.generate_coins())
             # Executes the random walk for as many steps as needed
             positions = sidewalk.wander(end_step)
+            # Slices the last position and stores it
+            self.pub_end_positions.append(positions[-1])
             # Stores the generated array
             self.pub_positions.append(positions)
             
@@ -146,7 +154,7 @@ class City:
         # Prevents user shenanigans: trying to calc average of nothing
         if not all(isinstance(row, (list, np.ndarray)) for row in self.pub_positions):
             return None
-
+        
         # Transforms the pub_positions array into a numpy one (a matrix if you will) 
         # for ease of manipulation
         self.pub_positions = np.array(self.pub_positions, dtype=float)
@@ -161,7 +169,9 @@ class City:
             column = self.pub_positions[:, step]
             # Calculates its average and stores in the array
             self.pub_average.append(np.average(column))
-
+            
+        # Changes the referential for the average calculation -- useful for the plotting
+        self.pub_average = [x - int(self.sidewalk_size / 2) for x in self.pub_average]
         # Returns the list of averages
         return self.pub_average
 
@@ -191,7 +201,7 @@ class City:
         # Returns the list of dispersions
         return self.pub_std
 
-    def make_avg_graph(self) -> None:
+    def make_avg_graph(self, plot_only: bool=True) -> None:
         """Plots the averages over time of the random walks. 
         """
         # Title -- Changes automatically with the number of sidewalks
@@ -199,34 +209,117 @@ class City:
         plt.xlabel("Time (Steps)")
         plt.ylabel("Average Position")
         
-        plt.plot(self.calc_pub_avg())
+        # Calculates and stores the average over time 
+        pubavg = self.calc_pub_avg()
+        
+        # Writes the data to a file for posterior storage 
+        if not plot_only:
+            with open(
+                    f"AvgPos_{time()}"
+                    f"_nsw={self.n_sidewalks}"
+                    f"_sws={self.sidewalk_size}"
+                    f"_w={self.coin_W}.dat""", "w") as f:
+                
+                for i, val in enumerate(pubavg, start=1):
+                    f.write(f"{i} {val:.4f}\n")
+        
+        # Plots the data in a matplotlib plot
+        plt.plot(pubavg)
         
         # Saves the plot -- filename automatically configured for timestamp, coin, number of
         # sidewalks and their size
         plt.savefig(
-            f"AvgPos_{time()}_"
-            f"nsw={self.n_sidewalks}_"
-            f"sws={self.sidewalk_size}_.png"
+            f"""AvgPos_{time()}_
+            nsw={self.n_sidewalks}_
+            sws={self.sidewalk_size}_
+            w={self.coin_W}.png"""
         )
         plt.close()
 
-    def make_std_graph(self) -> None:
-        """Plots the dispersion over time of the random walks.
-        """
-        # Title -- Changes automatically with the number of sidewalks
-        plt.title(f"Dispersion for {self.n_sidewalks} Drunkards")
-        plt.xlabel("Time (Steps)")
-        plt.ylabel("Dispersion / Standard Deviation")
+    def make_std_graph(self, plot_only: bool=True) -> None:
+        """Plots the dispersion over time of the random walks."""
+        
+        # Calculates and stores the dispersion over time 
+        pubstd = self.calc_pub_std()
 
-        plt.plot(self.calc_pub_std())
+        if not plot_only:
+            # Writes the data to a file for posterior storage 
+            with open(
+                f"Disp_{time()}_"
+                f"nsw={self.n_sidewalks}_"
+                f"sws={self.sidewalk_size}_"
+                f"w={self.coin_W}.dat", "w") as f:
+                
+                for i, val in enumerate(pubstd, start=1):
+                    f.write(f"{i} {val:.4f}\n")
 
-        # Saves the plot -- filename automatically configured for timestamp, coin, number of
-        # sidewalks and their size
+        # Prepare data for plotting
+        xpoints = np.arange(len(pubstd))
+        sqrt_t = np.sqrt(xpoints)
+
+        fig, ax = plt.subplots()
+        
+        # Title and labels
+        ax.set_title(f"Dispersion for {self.n_sidewalks} Drunkards")
+        ax.set_xlabel("Time (Steps)")
+        ax.set_ylabel("Dispersion")
+
+        # Plots
+        ax.plot(pubstd, label="Dispersion")
+        ax.plot(sqrt_t, label=r"$\sqrt{t}$", linestyle='--')
+
+        # Add legend
+        ax.legend(loc='upper right')
+
+        # Saves the plot
         plt.savefig(
             f"Disp_{time()}_"
             f"nsw={self.n_sidewalks}_"
-            f"sws={self.sidewalk_size}_.png"
+            f"sws={self.sidewalk_size}_"
+            f"w={self.coin_W}.png"
         )
+
+        plt.close()
         
-        # Closes the plot to prevent memory accumulation and plotting over the same plot
+    def make_endpos_graph(self, sturges: bool=True, nbins: int=50) -> None:
+        """Plots the end positions of every random walk simulated.
+
+        Args:
+            sturges (bool): If True, uses Sturges' Law for the histogram bin count. Defaults to True
+            nbins (int, optional): Number of bins to use if not using Sturges' Law. Defaults to 50.
+        """
+
+        # Changes the referential for the plot
+        self.pub_end_positions = [x - int(self.sidewalk_size / 2) for x in self.pub_end_positions]
+
+        # Fits a gaussian curve to the positions
+        mu, sigma = norm.fit(self.pub_end_positions)
+
+        # Title changes automatically with the number of sidewalks
+        plt.title(f"Final positions for {self.n_sidewalks} Drunkards")
+        plt.suptitle(f"Mu: {mu:.4f}, Sigma: {sigma:.4f}")
+        plt.xlabel("Final position")
+        plt.ylabel("Frequency")
+        
+        if sturges:
+            # Using Sturges' rule: bins = 1 + log2(n)
+            nbins = int(np.ceil(1 + np.log2(len(self.pub_end_positions))))
+
+        # Plots the histogram
+        count, bins, _ = plt.hist(self.pub_end_positions, bins=nbins, density=True, alpha=0.6, color='b')
+
+        # Plots the gaussian fit
+        x = np.linspace(min(bins), max(bins), 1000)
+        y = norm.pdf(x, mu, sigma)
+        plt.plot(x, y, 'r--', linewidth=2)
+
+        # Save plot
+        plt.savefig(
+            f"Endpos_{time():.0f}_"
+            f"nsw={self.n_sidewalks}_"
+            f"sws={self.sidewalk_size}_"
+            f"sigma={sigma}"
+            f"w={self.coin_W}.png"
+        )
+
         plt.close()
