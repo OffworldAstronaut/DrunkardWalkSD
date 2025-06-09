@@ -48,7 +48,7 @@ The simulation generates **``.png``** plots such as:
 
 **``AvgPos_...png``**: Average position of multiple walkers over time.
 
-**``Disp_...png``**: Dispersion (standard deviation) of positions among all walkers.
+**``Disp_...png``**: Dispersion (standard deviation) of positions among all walkers (linear or loglog).
 
 **``EndPos_...png``**: Histogram of ending positions of multiple walkers.
 
@@ -85,7 +85,7 @@ sidewalk.make_wandering_plot()
 ```py 
 # This code is on example.py
 
-import DrunkardWalkSD as DWSD
+iimport DrunkardWalkSD as DWSD
 
 quantity_sidewalks = 10_000
 size_sidewalks = 500
@@ -96,7 +96,7 @@ city = DWSD.City(quantity_sidewalks, size_sidewalks, disorder_intensity)
 city.roam()
 
 city.make_avg_graph(plot_only=False)
-city.make_std_graph(plot_only=False)
+city.make_std_graph(plot_only=True, loglog=True)
 city.make_endpos_graph()
 ```
 
@@ -112,4 +112,5 @@ city.make_endpos_graph()
 
 **Dispersion plot**
 
-![Dispersion histogram](examples/imgs/ex_std.png)
+![Dispersion plot (linear)](examples/imgs/ex_std.png)
+![Dispersion plot (loglog)](examples/imgs/ex_stdloglog.png)

@@ -236,7 +236,7 @@ class City:
         )
         plt.close()
 
-    def make_std_graph(self, plot_only: bool=True) -> None:
+    def make_std_graph(self, plot_only: bool=True, loglog: bool=False) -> None:
         """Plots the dispersion over time of the random walks."""
         
         # Calculates and stores the dispersion over time 
@@ -256,17 +256,23 @@ class City:
         # Prepare data for plotting
         xpoints = np.arange(len(pubstd))
         sqrt_t = np.sqrt(xpoints)
+        
+        coef_ang, coef_lin = np.polyfit(xpoints, pubstd, 1)
 
         fig, ax = plt.subplots()
         
         # Title and labels
-        ax.set_title(f"Dispersion for {self.n_sidewalks} Drunkards")
+        ax.set_title(f"Dispersion for {self.n_sidewalks} Drunkards, W={self.coin_W}")
         ax.set_xlabel("Time (Steps)")
         ax.set_ylabel("Dispersion")
 
         # Plots
-        ax.plot(pubstd, label="Dispersion")
-        ax.plot(sqrt_t, label=r"$\sqrt{t}$", linestyle='--')
+        if loglog:
+            ax.loglog(pubstd, label=f"Dispersion, Alpha={coef_ang:.4f}")
+            ax.loglog(sqrt_t, label=r"$\sqrt{t}$", linestyle='--')
+        else:
+            ax.plot(pubstd, label=f"Dispersion, Alpha={coef_ang:.4f}")
+            ax.plot(sqrt_t, label=r"$\sqrt{t}$", linestyle='--')
 
         # Add legend
         ax.legend(loc='upper right')

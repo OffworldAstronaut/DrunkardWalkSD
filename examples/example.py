@@ -9,5 +9,5 @@ city = DWSD.City(quantity_sidewalks, size_sidewalks, disorder_intensity)
 city.roam()
 
 city.make_avg_graph(plot_only=False)
-city.make_std_graph(plot_only=False)
+city.make_std_graph(plot_only=True, loglog=True)
 city.make_endpos_graph()
