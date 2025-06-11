@@ -22,7 +22,9 @@ The repository is structured following OOP principles and Python module formatti
 
   - The standard deviation (dispersion) across multiple walkers;
 
-   - The histogram of final positions across multiple walkers.
+  - The histogram of final positions across multiple walkers.
+  
+  - The relation between disorder and dispersion;
 
 ### Random Coins
 
@@ -114,3 +116,7 @@ city.make_endpos_graph()
 
 ![Dispersion plot (linear)](examples/imgs/ex_std.png)
 ![Dispersion plot (loglog)](examples/imgs/ex_stdloglog.png)
+
+**Relation between W and Alpha** 
+
+![W vs Alpha plot](examples/imgs/comparison_alpha_w.png)

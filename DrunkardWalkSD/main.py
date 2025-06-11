@@ -80,7 +80,7 @@ class Sidewalk:
 class City:
     """Environment for multiple sidewalks -- runs many simulations for statistical analysis."""
 
-    def __init__(self, n_sidewalks: int, sidewalk_size: int, coin_W: float) -> None:
+    def __init__(self, n_sidewalks: int, sidewalk_size: int, coin_W: float=0.5) -> None:
         # Number of sidewalks in the city
         self.n_sidewalks = n_sidewalks
         # Size of the city's sidewalks 
@@ -103,18 +103,22 @@ class City:
         # Stores the dispersion (STD) of every walker in a given time -- same logic as above
         self.pub_std = []
 
+    def reset_data(self):
+        self.pub_positions = []
+        self.pub_end_positions = []
+        self.pub_average = []
+        self.pub_std = []
+        
+    def set_coin_W(self, new_coin_W: float) -> None:
+        self.coin_W = new_coin_W
+    
     def generate_coins(self) -> List[float]:
         # Lower bound of the possible coin values
         low_b = ((-1.0 * self.coin_W) / 2.0) + 0.5
         # Upper bound of the possible coin values
-        high_b = (self.coin_W / 2.0) + 0.5
-        # List of coins assigned to each sidewalk position
-        coins = []
-        
-        # Populates the list of coins with uniform probability (limited by the calculated bounds)
-        for _ in range(self.sidewalk_size):    
-            new_coin = np.random.uniform(low_b, high_b)
-            coins.append(new_coin)
+        high_b = (self.coin_W / 2.0) + 0.5    
+        # List of coins assigned to each sidewalk position -- Populated by a uniform prob. dist. via Numpy
+        coins = np.random.uniform(low_b, high_b, self.sidewalk_size).tolist()
             
         # Returns the generated coins
         return coins
@@ -236,11 +240,20 @@ class City:
         )
         plt.close()
 
-    def make_std_graph(self, plot_only: bool=True, loglog: bool=False) -> None:
-        """Plots the dispersion over time of the random walks."""
+    def make_std_graph(self, tail: int, plot_only: bool=True, loglog: bool=False, only_coef: bool=False) -> float:
+        """Plots the dispersion over time of random walks
+
+        Args:
+            plot_only (bool, optional): If this option is true, no .dat will be written. Defaults to True.
+            loglog (bool, optional): Option to plot linear or log-log. Defaults to False (linear).
+
+        Returns:
+            float: angular coefficient of the polyfit line
+        """
         
         # Calculates and stores the dispersion over time 
         pubstd = self.calc_pub_std()
+        xpoints = np.arange(len(pubstd))
 
         if not plot_only:
             # Writes the data to a file for posterior storage 
@@ -254,38 +267,45 @@ class City:
                     f.write(f"{i} {val:.4f}\n")
 
         # Prepare data for plotting
-        xpoints = np.arange(len(pubstd))
+        pubstd = pubstd[-tail:]
+        xpoints = xpoints[-tail:]
         sqrt_t = np.sqrt(xpoints)
+            
+        coef_ang, _ = np.polyfit(np.log(xpoints), np.log(pubstd), 1)
         
-        coef_ang, coef_lin = np.polyfit(xpoints, pubstd, 1)
+        if only_coef:
+            ...
 
-        fig, ax = plt.subplots()
+        else:    
+            fig, ax = plt.subplots()
+            
+            # Title and labels
+            ax.set_title(f"Dispersion for {self.n_sidewalks} Drunkards, W={self.coin_W}")
+            ax.set_xlabel("Time (Steps)")
+            ax.set_ylabel("Dispersion")
+
+            # Plots
+            if loglog:
+                ax.loglog(xpoints, pubstd, label=f"Dispersion, Alpha={coef_ang:.4f}")
+                ax.loglog(xpoints, sqrt_t, label=r"$\sqrt{t}$", linestyle='--')
+            else:
+                ax.plot(xpoints, pubstd, label=f"Dispersion, Alpha={coef_ang:.4f}")
+                ax.plot(xpoints, sqrt_t, label=r"$\sqrt{t}$", linestyle='--')
+
+            # Add legend
+            ax.legend(loc='upper right')
+
+            # Saves the plot
+            plt.savefig(
+                f"Disp_{time()}_"
+                f"nsw={self.n_sidewalks}_"
+                f"sws={self.sidewalk_size}_"
+                f"w={self.coin_W}.png"
+            )
+
+            plt.close()
         
-        # Title and labels
-        ax.set_title(f"Dispersion for {self.n_sidewalks} Drunkards, W={self.coin_W}")
-        ax.set_xlabel("Time (Steps)")
-        ax.set_ylabel("Dispersion")
-
-        # Plots
-        if loglog:
-            ax.loglog(pubstd, label=f"Dispersion, Alpha={coef_ang:.4f}")
-            ax.loglog(sqrt_t, label=r"$\sqrt{t}$", linestyle='--')
-        else:
-            ax.plot(pubstd, label=f"Dispersion, Alpha={coef_ang:.4f}")
-            ax.plot(sqrt_t, label=r"$\sqrt{t}$", linestyle='--')
-
-        # Add legend
-        ax.legend(loc='upper right')
-
-        # Saves the plot
-        plt.savefig(
-            f"Disp_{time()}_"
-            f"nsw={self.n_sidewalks}_"
-            f"sws={self.sidewalk_size}_"
-            f"w={self.coin_W}.png"
-        )
-
-        plt.close()
+        return coef_ang
         
     def make_endpos_graph(self, sturges: bool=True, nbins: int=50) -> None:
         """Plots the end positions of every random walk simulated.
